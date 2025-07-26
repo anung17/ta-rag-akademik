@@ -1,3 +1,5 @@
 # Exclude folder(s)
-/.venv/
+Program/.git/
+Program/.venv/
 Program/__pycache__/
+Program/
