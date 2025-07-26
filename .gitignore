@@ -1,3 +1,6 @@
+# Exclude file(s)
+*.zip
+
 # Exclude folder(s)
 Program/.git/
 Program/.venv/
