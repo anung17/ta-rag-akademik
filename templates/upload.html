@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block title %}Upload PDF{% endblock %}
+
+{% block page_title %}Upload PDF{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-12">
+        <div class="alert-container">
+            <!-- Dynamic alerts will be inserted here -->
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="card-header">
+                <h6>Upload PDF File</h6>
+            </div>
+            <div class="card-body">
+                <form action="{{ url_for('upload_pdf') }}" method="POST" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Password untuk Upload</label>
+                        <input type="password" class="form-control" id="password" name="password" required>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <div class="file-drop-area">
+                            <span class="file-input-label">Klik atau tarik file PDF ke sini</span>
+                            <input type="file" name="pdf_file" class="file-input" accept=".pdf" required>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-upload me-2"></i> Upload
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6>PDF Library</h6>
+                <span class="badge bg-primary">{{ pdfs|length }} Files</span>
+            </div>
+            <div class="card-body">
+                <div class="pdf-library">
+                    {% if pdfs %}
+                        {% for pdf in pdfs %}
+                        <div class="pdf-file-card" data-pdf-id="{{ loop.index }}">
+                            <div class="pdf-file-icon">
+                                <i class="fas fa-file-pdf"></i>
+                            </div>
+                            <div class="pdf-file-info">
+                                <h5 class="pdf-file-name">{{ pdf }}</h5>
+                                <p class="pdf-file-details mb-0 text-muted">
+                                    <span class="pdf-file-size">
+                                        {% set document = documents.get(pdf, {}) %}
+                                        {% if document.file_size %}
+                                            {{ (document.file_size / 1024)|round|int }} KB
+                                        {% else %}
+                                            Unknown size
+                                        {% endif %}
+                                    </span>
+                                    <span class="ms-2">
+                                        {% if document.num_pages %}
+                                            {{ document.num_pages }} pages
+                                        {% endif %}
+                                    </span>
+                                    <span class="ms-2">
+                                        {% if document.upload_date %}
+                                            Uploaded {{ document.upload_date.strftime('%d %b %Y') }}
+                                        {% endif %}
+                                    </span>
+                                </p>
+                            </div>
+                            <div class="pdf-file-actions">
+                                <button class="btn btn-sm btn-info preview-pdf-btn" data-pdf-filename="{{ pdf }}" data-bs-toggle="tooltip" title="Preview PDF">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="btn btn-sm btn-primary select-pdf-btn" data-pdf-filename="{{ pdf }}" data-bs-toggle="tooltip" title="Select for Chat">
+                                    <i class="fas fa-comments"></i>
+                                </button>
+                                <button class="btn btn-sm btn-danger delete-pdf-btn" data-pdf-id="{{ loop.index }}" data-pdf-filename="{{ pdf }}" data-bs-toggle="tooltip" title="Delete PDF">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center p-5">
+                            <i class="fas fa-file-upload fa-4x mb-3 text-muted"></i>
+                            <p>Tidak ada file PDF yang tersedia. Silakan unggah file terlebih dahulu.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- PDF Preview Modal -->
+<div class="modal fade" id="pdfPreviewModal" tabindex="-1" aria-labelledby="pdfPreviewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="pdfPreviewTitle">PDF Preview</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0">
+                <iframe id="pdfPreviewFrame" class="pdf-preview" src=""></iframe>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Handle select PDF buttons
+        const selectButtons = document.querySelectorAll('.select-pdf-btn');
+        
+        selectButtons.forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                const pdfFilename = this.getAttribute('data-pdf-filename');
+                
+                // Create a form and submit it to select the PDF
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '{{ url_for('select_pdf') }}';
+                
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'pdf_file';
+                input.value = pdfFilename;
+                
+                form.appendChild(input);
+                document.body.appendChild(form);
+                form.submit();
+            });
+        });
+    });
+</script>
+{% endblock %}

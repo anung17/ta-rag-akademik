@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Chatbot{% endblock %}
+
+{% block page_title %}Chatbot PDF{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="card-header">
+                <h6>PDF Chatbot</h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="chat-container">
+                    <div class="chat-header">
+                        <div class="pdf-selector-container">
+                            <select id="pdf-selector" class="form-select">
+                                <option value="">Pilih dokumen PDF</option>
+                                {% for pdf in pdfs %}
+                                <option value="{{ pdf }}" {% if pdf == active_pdf %}selected{% endif %}>{{ pdf }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="chat-messages">
+                        {% if not pdfs %}
+                        <div class="alert alert-warning m-3">
+                            Tidak ada file PDF yang tersedia. Silakan unggah file terlebih dahulu di menu "Upload File".
+                        </div>
+                        {% elif not active_pdf %}
+                        <div class="text-center p-5">
+                            <i class="fas fa-file-pdf fa-4x mb-3 text-primary"></i>
+                            <p>Silakan pilih file PDF untuk memulai percakapan.</p>
+                        </div>
+                        {% else %}
+                        <div class="bot-message message">
+                            <div class="message-content">
+                                File <strong>{{ active_pdf }}</strong> dipilih. Silakan ajukan pertanyaan Anda tentang dokumen ini.
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="chat-input">
+                        <form id="chat-form" class="d-flex">
+                            <input type="text" id="chat-input" class="form-control me-2" placeholder="Ketik pertanyaan Anda di sini..." {% if not active_pdf %}disabled{% endif %}>
+                            <button type="submit" class="btn btn-primary" {% if not active_pdf %}disabled{% endif %}>
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Additional page-specific JavaScript
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize any page-specific functionality
+        const pdfSelector = document.getElementById('pdf-selector');
+        const chatInput = document.getElementById('chat-input');
+        const submitButton = document.querySelector('#chat-form button[type="submit"]');
+        
+        if (pdfSelector) {
+            pdfSelector.addEventListener('change', function() {
+                if (this.value) {
+                    chatInput.disabled = false;
+                    submitButton.disabled = false;
+                } else {
+                    chatInput.disabled = true;
+                    submitButton.disabled = true;
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,231 @@
+/* Base Styles */
+:root {
+    --primary-color: #4285f4;
+    --primary-hover: #2b76f0;
+    --secondary-color: #34a853;
+    --text-color: #333;
+    --light-text: #666;
+    --lighter-text: #999;
+    --border-color: #ddd;
+    --background-color: #f7f9fc;
+    --white: #fff;
+    --error-color: #ea4335;
+    --success-color: #34a853;
+    --warning-color: #fbbc05;
+    --shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    background-color: var(--background-color);
+    color: var(--text-color);
+    line-height: 1.6;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+.container {
+    width: 100%;
+    max-width: 1200px;
+    padding: 0 20px;
+    margin: 0 auto;
+}
+
+/* Authentication Container */
+.auth-container {
+    background-color: var(--white);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    width: 100%;
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 40px;
+}
+
+.auth-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.auth-header h1 {
+    font-size: 2rem;
+    color: var(--primary-color);
+    margin-bottom: 5px;
+}
+
+.auth-header p {
+    color: var(--light-text);
+    font-size: 1rem;
+}
+
+/* Form Styles */
+.auth-form {
+    margin-bottom: 20px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    color: var(--text-color);
+    font-weight: 500;
+}
+
+.input-icon-wrapper {
+    position: relative;
+}
+
+.input-icon-wrapper i:first-child {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--lighter-text);
+}
+
+.input-icon-wrapper input {
+    width: 100%;
+    padding: 12px 15px 12px 40px;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    font-size: 1rem;
+    transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.input-icon-wrapper input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.2);
+}
+
+.toggle-password {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--lighter-text);
+    cursor: pointer;
+}
+
+/* Checkboxes */
+.checkbox-group, .remember-me {
+    display: flex;
+    align-items: center;
+}
+
+.checkbox-group input[type="checkbox"],
+.remember-me input[type="checkbox"] {
+    margin-right: 10px;
+    accent-color: var(--primary-color);
+}
+
+/* Button Styles */
+.btn {
+    display: inline-block;
+    padding: 12px 24px;
+    font-size: 1rem;
+    font-weight: 500;
+    text-align: center;
+    text-decoration: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s, transform 0.1s;
+    border: none;
+    width: 100%;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    color: var(--white);
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-hover);
+}
+
+.btn-primary:active {
+    transform: translateY(1px);
+}
+
+/* Links */
+.auth-links {
+    text-align: center;
+    margin-top: 15px;
+}
+
+.auth-links a {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.auth-links a:hover {
+    text-decoration: underline;
+}
+
+/* Flash Messages */
+.message-container {
+    margin-top: 20px;
+}
+
+.flash-message {
+    padding: 12px 15px;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    animation: fadeIn 0.3s ease;
+}
+
+.flash-message i {
+    margin-right: 10px;
+}
+
+.flash-success {
+    background-color: rgba(52, 168, 83, 0.1);
+    color: var(--success-color);
+    border-left: 3px solid var(--success-color);
+}
+
+.flash-error {
+    background-color: rgba(234, 67, 53, 0.1);
+    color: var(--error-color);
+    border-left: 3px solid var(--error-color);
+}
+
+.flash-warning {
+    background-color: rgba(251, 188, 5, 0.1);
+    color: var(--warning-color);
+    border-left: 3px solid var(--warning-color);
+}
+
+/* Responsive */
+@media (max-width: 576px) {
+    .auth-container {
+        padding: 30px 20px;
+    }
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

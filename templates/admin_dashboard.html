@@ -1,0 +1,354 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Users Stats Card -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-primary stat-card primary h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="stat-title text-uppercase mb-1">
+                            Total Users
+                        </div>
+                        <div class="stat-value">{{ users_count }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-users fa-2x stat-icon"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Documents Stats Card -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-success stat-card success h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="stat-title text-uppercase mb-1">
+                            Total Documents
+                        </div>
+                        <div class="stat-value">{{ documents_count }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-file-pdf fa-2x stat-icon"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Queries Stats Card -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-info stat-card info h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="stat-title text-uppercase mb-1">
+                            Total Queries
+                        </div>
+                        <div class="stat-value">{{ queries_count }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-comments fa-2x stat-icon"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Sessions Card -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-warning stat-card warning h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="stat-title text-uppercase mb-1">
+                            Active Sessions
+                        </div>
+                        <div class="stat-value">{{ active_sessions }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-user-clock fa-2x stat-icon"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Documents Chart -->
+    <div class="col-xl-8 col-lg-7">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold">Daily Queries</h6>
+            </div>
+            <div class="card-body">
+                <div class="chart-area-lg">
+                    <canvas id="queriesChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Feedback Pie Chart -->
+    <div class="col-xl-4 col-lg-5">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold">Feedback Distribution</h6>
+            </div>
+            <div class="card-body">
+                <div class="chart-area">
+                    <canvas id="feedbackChart"></canvas>
+                </div>
+                <div class="mt-4 text-center small">
+                    <span class="me-2">
+                        <i class="fas fa-circle text-success"></i> Satisfied
+                    </span>
+                    <span class="me-2">
+                        <i class="fas fa-circle text-danger"></i> Unsatisfied
+                    </span>
+                    <span>
+                        <i class="fas fa-circle text-info"></i> No Feedback
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Recent Documents -->
+    <div class="col-12">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold">Recent Documents</h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered datatable" width="100%" cellspacing="0">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Filename</th>
+                                <th>Size</th>
+                                <th>Pages</th>
+                                <th>Upload Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for doc in recent_documents %}
+                            <tr>
+                                <td>{{ loop.index }}</td>
+                                <td>{{ doc.filename }}</td>
+                                <td>{{ (doc.file_size / 1024)|round|int }} KB</td>
+                                <td>{{ doc.num_pages }}</td>
+                                <td>{{ doc.upload_date.strftime('%d %b %Y, %H:%M') }}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-info preview-pdf-btn" data-pdf-filename="{{ doc.filename }}" data-bs-toggle="tooltip" title="Preview">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-danger delete-pdf-btn" data-pdf-id="{{ doc.id }}" data-pdf-filename="{{ doc.filename }}" data-bs-toggle="tooltip" title="Delete">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- PDF Preview Modal -->
+<div class="modal fade" id="pdfPreviewModal" tabindex="-1" aria-labelledby="pdfPreviewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="pdfPreviewTitle">PDF Preview</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0">
+                <iframe id="pdfPreviewFrame" class="pdf-preview" src=""></iframe>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Get database data for charts (passed from the Flask route)
+        const queriesData = {
+            labels: [
+                {% for date, count in query_history_data.items() %}
+                    "{{ date }}",
+                {% endfor %}
+            ],
+            values: [
+                {% for date, count in query_history_data.items() %}
+                    {{ count }},
+                {% endfor %}
+            ]
+        };
+        
+        const feedbackData = {
+            labels: [
+                {% for feedback in feedback_stats %}
+                    {% if feedback.feedback_type == 'satisfied' %}
+                        'Satisfied',
+                    {% elif feedback.feedback_type == 'unsatisfied' %}
+                        'Unsatisfied',
+                    {% else %}
+                        '{{ feedback.feedback_type }}',
+                    {% endif %}
+                {% endfor %}
+                {% if not feedback_stats %}
+                    'No Feedback',
+                {% endif %}
+            ],
+            values: [
+                {% for feedback in feedback_stats %}
+                    {{ feedback.count }},
+                {% endfor %}
+                {% if not feedback_stats %}
+                    0,
+                {% endif %}
+            ]
+        };
+        
+        // Daily Queries Chart
+        const queriesCtx = document.getElementById('queriesChart');
+        const queriesChart = new Chart(queriesCtx, {
+            type: 'line',
+            data: {
+                labels: queriesData.labels,
+                datasets: [{
+                    label: 'Queries',
+                    lineTension: 0.3,
+                    backgroundColor: "rgba(78, 115, 223, 0.05)",
+                    borderColor: "rgba(78, 115, 223, 1)",
+                    pointRadius: 3,
+                    pointBackgroundColor: "rgba(78, 115, 223, 1)",
+                    pointBorderColor: "rgba(78, 115, 223, 1)",
+                    pointHoverRadius: 5,
+                    pointHoverBackgroundColor: "rgba(78, 115, 223, 1)",
+                    pointHoverBorderColor: "rgba(78, 115, 223, 1)",
+                    pointHitRadius: 10,
+                    pointBorderWidth: 2,
+                    data: queriesData.values,
+                }],
+            },
+            options: {
+                maintainAspectRatio: false,
+                layout: {
+                    padding: {
+                        left: 10,
+                        right: 25,
+                        top: 25,
+                        bottom: 0
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            display: false,
+                            drawBorder: false
+                        }
+                    },
+                    y: {
+                        ticks: {
+                            maxTicksLimit: 5,
+                            padding: 10,
+                            precision: 0,
+                            callback: function(value, index, values) {
+                                return value;
+                            }
+                        },
+                        grid: {
+                            color: "rgb(234, 236, 244)",
+                            zeroLineColor: "rgb(234, 236, 244)",
+                            drawBorder: false,
+                            borderDash: [2],
+                            zeroLineBorderDash: [2]
+                        }
+                    },
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: "rgb(255,255,255)",
+                        bodyColor: "#858796",
+                        titleMarginBottom: 10,
+                        titleColor: '#6e707e',
+                        titleFontSize: 14,
+                        borderColor: '#dddfeb',
+                        borderWidth: 1,
+                        xPadding: 15,
+                        yPadding: 15,
+                        displayColors: false,
+                        intersect: false,
+                        mode: 'index',
+                        caretPadding: 10,
+                        callbacks: {
+                            label: function(context) {
+                                return 'Queries: ' + context.parsed.y;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Feedback Pie Chart
+        const feedbackCtx = document.getElementById('feedbackChart');
+        const feedbackChart = new Chart(feedbackCtx, {
+            type: 'doughnut',
+            data: {
+                labels: feedbackData.labels,
+                datasets: [{
+                    data: feedbackData.values,
+                    backgroundColor: ['#1cc88a', '#e74a3b', '#36b9cc'],
+                    hoverBackgroundColor: ['#17a673', '#e02d1b', '#2c9faf'],
+                    hoverBorderColor: "rgba(234, 236, 244, 1)",
+                }],
+            },
+            options: {
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: "rgb(255,255,255)",
+                        bodyColor: "#858796",
+                        borderColor: '#dddfeb',
+                        borderWidth: 1,
+                        xPadding: 15,
+                        yPadding: 15,
+                        displayColors: false,
+                        caretPadding: 10,
+                    },
+                },
+                cutout: '70%',
+            },
+        });
+    });
+</script>
+{% endblock %}
