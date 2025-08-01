@@ -41,10 +41,10 @@ app.config['SESSION_TYPE'] = 'filesystem'
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=5)
 
 # Konfigurasi database
-db_user = os.environ.get('DB_USER', 'root')
-db_password = os.environ.get('DB_PASSWORD', '')  # kosongin default password
-db_host = os.environ.get('DB_HOST', 'localhost')
-db_name = os.environ.get('DB_NAME', 'pdf_qa_app')
+db_user = os.environ.get('DB_USER', 'chatbotakademik')
+db_password = os.environ.get('DB_PASSWORD', 'tanyajawab')  # kosongin default password
+db_host = os.environ.get('DB_HOST', 'chatbotakademik.mysql.pythonanywhere-services.com')
+db_name = os.environ.get('DB_NAME', 'chatbotakademik$pdf_qa_app')
 
 app.config['SQLALCHEMY_DATABASE_URI'] = f"mysql+pymysql://{db_user}:{db_password}@{db_host}/{db_name}"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -78,10 +78,10 @@ class User(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now)
     last_login = db.Column(db.DateTime)
     sessions = db.relationship('UserSession', backref='user', lazy='dynamic', cascade='all, delete-orphan')
-    
+
     def set_password(self, password):
         self.password_hash = hashlib.sha256(password.encode()).hexdigest()
-    
+
     def check_password(self, password):
         return self.password_hash == hashlib.sha256(password.encode()).hexdigest()
 
@@ -92,7 +92,7 @@ class UserSession(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now)
     last_activity = db.Column(db.DateTime, default=datetime.now)
     active_pdf = db.Column(db.String(255), nullable=True)
-    
+
     def update_activity(self):
         self.last_activity = datetime.now()
         db.session.commit()
@@ -123,7 +123,7 @@ class Feedback(db.Model):
     feedback_type = db.Column(db.String(20), nullable=False)  # 'satisfied' atau 'unsatisfied'
     message = db.Column(db.Text, nullable=True)
     timestamp = db.Column(db.DateTime, default=datetime.now)
-    
+
 # Fungsi helper untuk sesi
 def create_session_id():
     return str(uuid.uuid4())
@@ -172,12 +172,12 @@ def extract_text_from_pdf(pdf_path):
             text = ''
             total_pages = len(reader.pages)
             logger.info(f"Processing PDF: {pdf_path} with {total_pages} pages")
-            
+
             for i, page in enumerate(reader.pages):
                 if i % 10 == 0:  # Log progress for large documents
                     logger.info(f"Processing page {i+1}/{total_pages}")
                 text += page.extract_text() or ""  # Handle None returns
-            
+
             logger.info(f"Extracted text from {pdf_path} (length: {len(text)} chars)")
             return text
     except Exception as e:
@@ -188,20 +188,20 @@ def extract_text_from_pdf(pdf_path):
 def process_pdf(pdf_filename):
     pdf_path = os.path.join(data_folder, pdf_filename)
     faiss_index_path = os.path.join(faiss_indices_folder, pdf_filename.replace('.pdf', ''))
-    
+
     if not os.path.exists(pdf_path):
         logger.error(f"PDF file not found: {pdf_path}")
         return None
-    
+
     try:
         if not os.path.exists(faiss_index_path):
             logger.info(f"Creating new FAISS index for {pdf_filename}")
             pdf_text = extract_text_from_pdf(pdf_path)
-            
+
             if not pdf_text:
                 logger.error(f"No text extracted from {pdf_filename}")
                 return None
-                
+
             # Gunakan chunk size yang lebih reasonable untuk text splitting
             text_splitter = RecursiveCharacterTextSplitter(
                 chunk_size=1000000000,
@@ -210,16 +210,16 @@ def process_pdf(pdf_filename):
                 length_function=len
             )
             texts = text_splitter.split_text(pdf_text)
-            
+
             logger.info(f"Split text into {len(texts)} chunks")
-            
+
             # Gunakan embedding model yang lebih baik untuk bahasa Indonesia
             embeddings = HuggingFaceEmbeddings(
                 model_name="sentence-transformers/all-MiniLM-L6-v2",
                 model_kwargs={'device': 'cpu'},
                 encode_kwargs={'normalize_embeddings': True}
             )
-            
+
             vector_store = FAISS.from_texts(texts, embeddings)
             vector_store.save_local(faiss_index_path)
             logger.info(f"FAISS index saved to {faiss_index_path}")
@@ -231,7 +231,7 @@ def process_pdf(pdf_filename):
                 encode_kwargs={'normalize_embeddings': True}
             )
             vector_store = FAISS.load_local(faiss_index_path, embeddings, allow_dangerous_deserialization=True)
-        
+
         return vector_store
     except Exception as e:
         logger.error(f"Error processing PDF {pdf_filename}: {e}")
@@ -241,23 +241,23 @@ def process_pdf(pdf_filename):
 def get_vector_store(pdf_filename):
     session_id = get_or_create_session()
     cache_key = f"{session_id}:{pdf_filename}"
-    
+
     # Cek apakah vector store sudah ada di cache
     if cache_key in vector_store_cache:
         return vector_store_cache[cache_key]
-    
+
     # Jika tidak, proses PDF dan simpan ke cache
     vector_store = process_pdf(pdf_filename)
     if vector_store:
         vector_store_cache[cache_key] = vector_store
-        
+
         # Membersihkan cache jika terlalu besar (simplifikasi, bisa dioptimalkan)
         if len(vector_store_cache) > 100:
             # Hapus 20% entri cache terlama
             keys_to_remove = list(vector_store_cache.keys())[:20]
             for key in keys_to_remove:
                 vector_store_cache.pop(key, None)
-                
+
     return vector_store
 
 # Fungsi untuk menghasilkan respons dengan Gemini (IMPROVED)
@@ -269,7 +269,7 @@ def generate_response(prompt, vector_store, language="id"):
     try:
         # Set up retriever dari vector store dengan lebih banyak dokumen relevan
         retriever = vector_store.as_retriever(search_kwargs={"k": 5})
-        
+
         # Ambil teks yang paling relevan dari FAISS
         retrieved_docs = retriever.get_relevant_documents(prompt)
 
@@ -281,9 +281,9 @@ def generate_response(prompt, vector_store, language="id"):
         relevant_texts = []
         for i, doc in enumerate(retrieved_docs):
             relevant_texts.append(f"[Bagian {i+1}]\n{doc.page_content}\n")
-        
+
         relevant_text = "\n".join(relevant_texts)
-        
+
         logger.info(f"Retrieved {len(retrieved_docs)} relevant documents for query: {prompt[:50]}...")
 
         # Format prompt yang lebih terstruktur untuk hasil yang lebih baik
@@ -309,12 +309,12 @@ Answer:"""
 
         # Try different Gemini models in order of preference
         models_to_try = ['gemini-2.0-flash', 'gemini-1.5-pro', 'gemini-1.5-flash']
-        
+
         for model_name in models_to_try:
             try:
                 logger.info(f"Trying model: {model_name}")
                 model = genai.GenerativeModel(model_name)
-                
+
                 # Generate dengan parameter yang lebih spesifik
                 response = model.generate_content(
                     full_prompt,
@@ -330,11 +330,11 @@ Answer:"""
                 if response and hasattr(response, "text") and response.text:
                     logger.info(f"Successfully generated response with model: {model_name}")
                     return response.text
-                
+
             except Exception as e:
                 logger.warning(f"Failed with model {model_name}: {e}")
                 continue
-        
+
         # If all models fail, return error message
         logger.error("All Gemini models failed to generate response")
         return "Maaf, saya tidak bisa memberikan jawaban saat ini. Semua model gagal memberikan respons."
@@ -353,15 +353,15 @@ def index():
     if 'user_id' not in session:
         # If not logged in, redirect to login page
         return redirect(url_for('login'))
-    
+
     # If user is logged in, proceed to the chatbot interface
     pdfs = get_available_pdfs()
     active_pdf = get_active_pdf()
     now = datetime.now()  # Tambahkan waktu sekarang untuk timestamp
-    
+
     if not pdfs:
         flash("Tidak ada file PDF di folder 'data/'. Silakan tambahkan beberapa file PDF terlebih dahulu.", "warning")
-    
+
     return render_template('index.html', pdfs=pdfs, active_pdf=active_pdf, now=now)
 
 @app.route('/select_pdf', methods=['POST'])
@@ -370,13 +370,13 @@ def select_pdf():
     if 'user_id' not in session:
         # If not logged in, redirect to login page
         return redirect(url_for('login'))
-    
+
     # If user is logged in, proceed to the chatbot interface
     pdf_filename = request.form.get('pdf_file')
     if not pdf_filename:
         flash("Silakan pilih file PDF", "error")
         return redirect(url_for('index'))
-    
+
     # Cari dokumen di database atau buat baru jika belum ada
     document = Document.query.filter_by(filename=pdf_filename).first()
     if not document:
@@ -384,11 +384,11 @@ def select_pdf():
             # Ambil informasi file untuk dokumen baru
             pdf_path = os.path.join(data_folder, pdf_filename)
             file_size = os.path.getsize(pdf_path)
-            
+
             with open(pdf_path, 'rb') as file:
                 reader = PyPDF2.PdfReader(file)
                 num_pages = len(reader.pages)
-            
+
             # Simpan informasi dokumen ke database
             document = Document(
                 filename=pdf_filename,
@@ -400,17 +400,17 @@ def select_pdf():
             db.session.commit()
         except Exception as e:
             logger.error(f"Error creating document record: {e}")
-    
+
     # Proses PDF dan simpan ke cache
     vector_store = get_vector_store(pdf_filename)
-    
+
     if vector_store is None:
         flash(f"Gagal memproses {pdf_filename}. Periksa log untuk detail.", "error")
         return redirect(url_for('index'))
-    
+
     # Set PDF aktif untuk sesi ini
     set_active_pdf(pdf_filename)
-    
+
     flash(f"File {pdf_filename} berhasil dipilih", "success")
     return redirect(url_for('index'))
 
@@ -434,12 +434,12 @@ def ask():
 
         # Generate response
         response = generate_response(question, vector_store, language)
-        
+
         # Simpan pertanyaan dan jawaban ke database
         try:
             session_id = get_or_create_session()
             document = Document.query.filter_by(filename=active_pdf).first()
-            
+
             if document:
                 query = Query(
                     session_id=session_id,
@@ -453,9 +453,9 @@ def ask():
         except Exception as e:
             logger.error(f"Error saving query to database: {e}")
             # Lanjutkan meskipun gagal menyimpan ke database
-        
+
         return jsonify({"response": response})
-    
+
     except Exception as e:
         logger.error(f"Error in /ask endpoint: {e}")
         return jsonify({"error": f"Terjadi kesalahan: {str(e)}"}), 500
@@ -468,7 +468,7 @@ def feedback():
         message = data.get('message', '')
         question = data.get('question', '')
         response = data.get('response', '')
-        
+
         # Simpan feedback ke database jika tersedia informasi query
         if question and response:
             try:
@@ -477,7 +477,7 @@ def feedback():
                     question=question,
                     answer=response
                 ).order_by(Query.timestamp.desc()).first()
-                
+
                 if query_obj:
                     # Simpan feedback ke database
                     feedback_entry = Feedback(
@@ -489,7 +489,7 @@ def feedback():
                     db.session.commit()
             except Exception as e:
                 logger.error(f"Error saving feedback to database: {e}")
-        
+
         # Tetap simpan ke log file untuk kompatibilitas
         feedback_data = {
             "timestamp": datetime.now().isoformat(),
@@ -500,10 +500,10 @@ def feedback():
             "pdf": get_active_pdf(),
             "session_id": get_or_create_session()
         }
-        
+
         with open('feedback_log.txt', 'a') as f:
             f.write(f"{feedback_data}\n")
-        
+
         logger.info(f"Feedback received: {feedback_type}")
         return jsonify({"status": "success"})
     except Exception as e:
@@ -519,44 +519,44 @@ def register():
         password = request.form.get('password')
         is_admin = request.form.get('is_admin') == 'on'  # Checkbox value
         admin_code = request.form.get('admin_code')
-        
+
         # Validasi input
         if not username or not email or not password:
             flash('Semua field harus diisi', 'error')
             return redirect(url_for('register'))
-        
+
         # Validasi kode admin jika user ingin menjadi admin
-        ADMIN_CODE = "kode_rahasia_2024"  
+        ADMIN_CODE = "kode_rahasia_2024"
         if is_admin:
             if admin_code != ADMIN_CODE:
                 flash('Kode admin tidak valid', 'error')
                 return redirect(url_for('register'))
-        
+
         # Cek apakah user sudah ada
         existing_user = User.query.filter_by(username=username).first()
         if existing_user:
             flash('Username sudah digunakan', 'error')
             return redirect(url_for('register'))
-        
+
         existing_email = User.query.filter_by(email=email).first()
         if existing_email:
             flash('Email sudah terdaftar', 'error')
             return redirect(url_for('register'))
-        
+
         # Buat user baru
         new_user = User(username=username, email=email)
         new_user.set_password(password)
-        
+
         # Set user pertama sebagai admin, atau jika admin code valid
         if User.query.count() == 0 or is_admin:
             new_user.is_admin = True
-        
+
         db.session.add(new_user)
         db.session.commit()
-        
+
         flash('Registrasi berhasil! Silakan login.', 'success')
         return redirect(url_for('login'))
-    
+
     return render_template('register.html')
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -564,9 +564,9 @@ def login():
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
-        
+
         user = User.query.filter_by(username=username).first()
-        
+
         if user and user.check_password(password):
             # Hapus sesi lama jika ada
             if 'session_id' in session:
@@ -574,34 +574,34 @@ def login():
                 if old_session:
                     # Get all queries for this session
                     queries = Query.query.filter_by(session_id=old_session.session_id).all()
-                    
+
                     # Delete all feedback for each query
                     for query in queries:
                         Feedback.query.filter_by(query_id=query.id).delete()
-                    
+
                     # Delete all queries
                     Query.query.filter_by(session_id=old_session.session_id).delete()
-                    
+
                     # Delete the old session
                     db.session.delete(old_session)
                     db.session.commit()
-            
+
             # Update last login time
             user.last_login = datetime.now()
             db.session.commit()
-            
+
             # Clear old session data
             session.clear()
-            
+
             # Set session data baru
             session['user_id'] = user.id
             session['username'] = user.username
             session['is_admin'] = user.is_admin
-            
+
             # Create new session entry
             new_session_id = create_session_id()
             session['session_id'] = new_session_id
-            
+
             # Create new session in database
             user_session = UserSession(
                 session_id=new_session_id,
@@ -609,12 +609,12 @@ def login():
             )
             db.session.add(user_session)
             db.session.commit()
-            
+
             flash(f'Selamat datang kembali, {user.username}!', 'success')
             return redirect(url_for('index'))
         else:
             flash('Username atau password salah', 'error')
-    
+
     return render_template('login.html')
 
 @app.route('/logout')
@@ -625,18 +625,18 @@ def logout():
             if user_session:
                 # First, get all queries for this session
                 queries = Query.query.filter_by(session_id=user_session.session_id).all()
-                
+
                 # Delete all feedback for each query
                 for query in queries:
                     Feedback.query.filter_by(query_id=query.id).delete()
-                
+
                 # Now delete all queries
                 Query.query.filter_by(session_id=user_session.session_id).delete()
-                
+
                 # Finally delete the user session
                 db.session.delete(user_session)
                 db.session.commit()
-        
+
     session.clear()
     flash('Anda berhasil logout', 'success')
     return redirect(url_for('login'))
@@ -648,43 +648,43 @@ def admin_sessions():
     if not session.get('is_admin', False):
         flash('Access denied. Admin privileges required.', 'error')
         return redirect(url_for('index'))
-    
+
     # Get all user sessions
     sessions = db.session.query(UserSession, User).join(User).order_by(UserSession.last_activity.desc()).all()
-    
+
     return render_template('admin_sessions.html', sessions=sessions)
 
 @app.route('/admin/delete_session/<int:session_id>', methods=['POST'])
 def delete_session(session_id):
     if not session.get('is_admin', False):
         return jsonify({'error': 'Unauthorized'}), 403
-    
+
     try:
         user_session = UserSession.query.get(session_id)
         if user_session:
             # Get all queries for this session
             queries = Query.query.filter_by(session_id=user_session.session_id).all()
-            
+
             # Delete all feedback for each query
             for query in queries:
                 Feedback.query.filter_by(query_id=query.id).delete()
-            
+
             # Delete all queries
             Query.query.filter_by(session_id=user_session.session_id).delete()
-            
+
             # Remove from cache
             cache_keys_to_remove = []
             for key in vector_store_cache.keys():
                 if key.startswith(user_session.session_id):
                     cache_keys_to_remove.append(key)
-            
+
             for key in cache_keys_to_remove:
                 vector_store_cache.pop(key, None)
-            
+
             # Delete the session
             db.session.delete(user_session)
             db.session.commit()
-            
+
             return jsonify({'success': True, 'message': 'Session deleted successfully'})
         else:
             return jsonify({'error': 'Session not found'}), 404
@@ -699,23 +699,23 @@ def cleanup_sessions():
     """Cleanup old sessions."""
     cutoff_date = datetime.now() - timedelta(days=7)
     old_sessions = UserSession.query.filter(UserSession.last_activity < cutoff_date).all()
-    
+
     count = 0
     for old_session in old_sessions:
         # Get all queries for this session
         queries = Query.query.filter_by(session_id=old_session.session_id).all()
-        
+
         # Delete all feedback for each query
         for query in queries:
             Feedback.query.filter_by(query_id=query.id).delete()
-        
+
         # Delete all queries
         Query.query.filter_by(session_id=old_session.session_id).delete()
-        
+
         # Delete the session
         db.session.delete(old_session)
         count += 1
-    
+
     db.session.commit()
     print(f"Cleaned up {count} old sessions")
 
@@ -725,44 +725,44 @@ def delete_pdf(pdf_id):
     try:
         # Get document from database
         document = Document.query.get(pdf_id)
-        
+
         if not document:
             # Try to find document by filename index
             pdfs = get_available_pdfs()
             if 0 <= pdf_id - 1 < len(pdfs):
                 filename = pdfs[pdf_id - 1]
                 document = Document.query.filter_by(filename=filename).first()
-        
+
         if not document:
             return jsonify({'error': 'Document not found', 'success': False}), 404
-        
+
         filename = document.filename
         file_path = os.path.join(data_folder, filename)
-        
+
         # Delete the file from disk
         if os.path.exists(file_path):
             os.remove(file_path)
-        
+
         # Delete FAISS index if exists
         faiss_index_path = os.path.join(faiss_indices_folder, filename.replace('.pdf', ''))
         if os.path.exists(faiss_index_path):
             import shutil
             shutil.rmtree(faiss_index_path)
-        
+
         # Delete from database
         db.session.delete(document)
         db.session.commit()
-        
+
         # Clean up cache if exists
         for key in list(vector_store_cache.keys()):
             if filename in key:
                 vector_store_cache.pop(key, None)
-                
+
         return jsonify({
-            'success': True, 
+            'success': True,
             'message': f'File {filename} has been deleted successfully'
         })
-    
+
     except Exception as e:
         logger.error(f"Error deleting PDF: {e}")
         db.session.rollback()
@@ -777,30 +777,30 @@ def upload_pdf():
         if password != UPLOAD_PASSWORD:
             flash('Password salah. Akses ditolak.', 'error')
             return redirect(request.url)
-            
+
         if 'pdf_file' not in request.files:
             flash('No file part', 'error')
             return redirect(request.url)
-        
+
         file = request.files['pdf_file']
-        
+
         if file.filename == '':
             flash('No selected file', 'error')
             return redirect(request.url)
-        
+
         if file and file.filename.endswith('.pdf'):
             filename = os.path.basename(file.filename)
             file_path = os.path.join(data_folder, filename)
             file.save(file_path)
-            
+
             # Tambahkan dokumen ke database
             try:
                 file_size = os.path.getsize(file_path)
-                
+
                 with open(file_path, 'rb') as f:
                     reader = PyPDF2.PdfReader(f)
                     num_pages = len(reader.pages)
-                
+
                 # Check if document already exists
                 existing_doc = Document.query.filter_by(filename=filename).first()
                 if existing_doc:
@@ -818,15 +818,15 @@ def upload_pdf():
                         uploaded_by=session.get('user_id')
                     )
                     db.session.add(document)
-                
+
                 db.session.commit()
-                
+
                 # Clear any existing FAISS index to force reprocessing
                 faiss_index_path = os.path.join(faiss_indices_folder, filename.replace('.pdf', ''))
                 if os.path.exists(faiss_index_path):
                     import shutil
                     shutil.rmtree(faiss_index_path)
-                
+
                 flash(f'File {filename} successfully uploaded', 'success')
                 return redirect(url_for('index'))
             except Exception as e:
@@ -835,11 +835,11 @@ def upload_pdf():
                 return redirect(request.url)
         else:
             flash('Only PDF files are allowed', 'error')
-    
+
     # Get document info for all PDFs
     pdfs = get_available_pdfs()
     documents = {}
-    
+
     for pdf in pdfs:
         doc = Document.query.filter_by(filename=pdf).first()
         if doc:
@@ -849,7 +849,7 @@ def upload_pdf():
                 'num_pages': doc.num_pages,
                 'upload_date': doc.upload_date
             }
-    
+
     return render_template('upload.html', pdfs=pdfs, documents=documents)
 
 # Add this to modify your admin_dashboard route
@@ -859,12 +859,12 @@ def admin_dashboard():
     if not session.get('is_admin', False):
         flash('Access denied. Admin privileges required.', 'error')
         return redirect(url_for('index'))
-    
+
     # Get data for dashboard
     users_count = User.query.count() or 0
     documents_count = Document.query.count() or 0
     queries_count = Query.query.count() or 0
-    
+
     # Get documents with query counts
     recent_documents = []
     try:
@@ -873,15 +873,15 @@ def admin_dashboard():
             Query.document_id,
             db.func.count(Query.id).label('query_count')
         ).group_by(Query.document_id).subquery()
-        
+
         # Join with documents table
         document_query = db.session.query(
-            Document, 
+            Document,
             db.func.coalesce(query_counts.c.query_count, 0).label('query_count')
         ).outerjoin(
             query_counts, Document.id == query_counts.c.document_id
         ).order_by(Document.upload_date.desc()).limit(10)
-        
+
         # Process results
         for doc, query_count in document_query:
             # Add query_count attribute to document object
@@ -893,11 +893,11 @@ def admin_dashboard():
         recent_documents = Document.query.order_by(Document.upload_date.desc()).limit(10).all()
         for doc in recent_documents:
             doc.query_count = 0
-    
+
     active_sessions = UserSession.query.filter(
         UserSession.last_activity > datetime.now() - timedelta(minutes=30)
     ).count() or 0
-    
+
     # Get query history by date for chart
     query_history_data = {}
     try:
@@ -906,12 +906,12 @@ def admin_dashboard():
             db.func.date(Query.timestamp).label('date'),
             db.func.count(Query.id).label('count')
         ).group_by(db.func.date(Query.timestamp)).order_by(db.func.date(Query.timestamp)).all()
-        
+
         # Format dates for display
         for date, count in query_dates:
             formatted_date = date.strftime('%d %b')
             query_history_data[formatted_date] = count
-        
+
         # If no data, provide sample data
         if not query_history_data:
             today = datetime.now()
@@ -921,7 +921,7 @@ def admin_dashboard():
                 query_history_data[formatted_date] = 0
     except Exception as e:
         logger.error(f"Error getting query history data: {e}")
-    
+
     # Get feedback statistics
     feedback_stats = []
     try:
@@ -931,7 +931,7 @@ def admin_dashboard():
         ).group_by(Feedback.feedback_type).all()
     except Exception as e:
         logger.error(f"Error getting feedback statistics: {e}")
-    
+
     return render_template(
         'admin_dashboard.html',
         users_count=users_count,
@@ -942,7 +942,7 @@ def admin_dashboard():
         query_history_data=query_history_data,
         feedback_stats=feedback_stats
     )
-    
+
 # This is a simplified version that runs on request
 @app.before_request
 def cleanup_old_sessions():
@@ -952,27 +952,27 @@ def cleanup_old_sessions():
             # Delete sessions older than 7 days
             cutoff_date = datetime.now() - timedelta(days=7)
             old_sessions = UserSession.query.filter(UserSession.last_activity < cutoff_date).all()
-            
+
             for old_session in old_sessions:
                 # Get all queries for this session
                 queries = Query.query.filter_by(session_id=old_session.session_id).all()
-                
+
                 # Delete all feedback for each query
                 for query in queries:
                     Feedback.query.filter_by(query_id=query.id).delete()
-                
+
                 # Delete all queries
                 Query.query.filter_by(session_id=old_session.session_id).delete()
-                
+
                 # Delete the session
                 db.session.delete(old_session)
-            
+
             # Clean up vector store cache for expired sessions
             session_ids = [s.session_id for s in old_sessions]
             for key in list(vector_store_cache.keys()):
                 if key.split(':')[0] in session_ids:
                     vector_store_cache.pop(key, None)
-            
+
             db.session.commit()
             logger.info(f"Cleaned up {len(old_sessions)} expired sessions")
         except Exception as e:
@@ -993,13 +993,13 @@ def create_admin():
     username = input("Admin username: ")
     email = input("Admin email: ")
     password = input("Admin password: ")
-    
+
     # Check if admin already exists
     existing_admin = User.query.filter_by(username=username).first()
     if existing_admin:
         print("Admin user already exists.")
         return
-    
+
     admin = User(username=username, email=email, is_admin=True)
     admin.set_password(password)
     db.session.add(admin)
